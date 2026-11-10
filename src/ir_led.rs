@@ -1,0 +1,18 @@
+use embassy_rp::{
+    Peri,
+    gpio::{Input, Level, Output, Pin, Pull},
+};
+
+pub struct IRLed<'a> {
+    vcc: Output<'a>,
+    float: Input<'a>,
+}
+
+impl<'a> IRLed<'a> {
+    pub fn new(vcc: Peri<'a, impl Pin>, float: Peri<'a, impl Pin>) -> Self {
+        Self {
+            vcc: Output::new(vcc, Level::Low),
+            float: Input::new(float, Pull::None),
+        }
+    }
+}

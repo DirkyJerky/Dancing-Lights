@@ -1,7 +1,15 @@
 #![no_std]
 #![no_main]
 
-use cyw43::{Control, aligned_bytes};
+mod cyw43_gpio;
+mod ir_led;
+mod led_array;
+mod photoresistor;
+mod pinout;
+mod rgb_led;
+mod run;
+
+use cyw43::aligned_bytes;
 use cyw43_pio::{DEFAULT_CLOCK_DIVIDER, PioSpi};
 use defmt_rtt as _;
 use embassy_executor::Spawner;
@@ -15,7 +23,13 @@ use embassy_time::{Duration, Timer};
 use panic_probe as _;
 use static_cell::StaticCell;
 
+use crate::pinout::{
+    DancingLights, IRLedPins, LedArrayPinsBottom, LedArrayPinsMiddle, LedArrayPinsTop,
+    PhotoresistorPins, RGBLedPins,
+};
+
 bind_interrupts!(struct Irqs {
+    ADC_IRQ_FIFO => embassy_rp::adc::InterruptHandler;
     PIO0_IRQ_0 => InterruptHandler<PIO0>;
     DMA_IRQ_0 => dma::InterruptHandler<DMA_CH0>, dma::InterruptHandler<DMA_CH1>;
 });
@@ -65,19 +79,62 @@ async fn main(spawner: Spawner) {
         .set_power_management(cyw43::PowerManagementMode::PowerSave)
         .await;
 
+    let led_array_bottom = LedArrayPinsBottom {
+        red: peripherals.PIN_0,
+        yellow: peripherals.PIN_1,
+        green: peripherals.PIN_2,
+        blue: peripherals.PIN_3,
+        bottom_row: peripherals.PIN_18,
+        top_row: peripherals.PIN_28,
+    };
+
+    let led_array_middle = LedArrayPinsMiddle {
+        red: peripherals.PIN_4,
+        yellow: peripherals.PIN_5,
+        green: peripherals.PIN_6,
+        blue: peripherals.PIN_7,
+        bottom_row: peripherals.PIN_27,
+        top_row: peripherals.PIN_22,
+    };
+
+    let led_array_top = LedArrayPinsTop {
+        red: peripherals.PIN_8,
+        yellow: peripherals.PIN_9,
+        green: peripherals.PIN_10,
+        blue: peripherals.PIN_11,
+        bottom_row: peripherals.PIN_20,
+        top_row: peripherals.PIN_17,
+    };
+
+    let rgb_led = RGBLedPins {
+        red: peripherals.PIN_12,
+        float: peripherals.PIN_13,
+        blue: peripherals.PIN_14,
+        green: peripherals.PIN_15,
+    };
+
+    let ir_led = IRLedPins {
+        vcc: peripherals.PIN_21,
+        float: peripherals.PIN_19,
+    };
+
+    let photoresist = PhotoresistorPins {
+        adc: peripherals.ADC,
+        pin: peripherals.PIN_26,
+        irq: Irqs,
+    };
+
+    let lights: DancingLights<'static> = DancingLights::new(
+        control,
+        led_array_bottom,
+        led_array_middle,
+        led_array_top,
+        rgb_led,
+        ir_led,
+        photoresist,
+    );
+
     defmt::info!("Initialized.");
 
-    run(&mut control).await;
-}
-
-async fn run(control: &mut Control<'static>) -> ! {
-    loop {
-        defmt::info!("LED on!");
-        control.gpio_set(0, true).await;
-        Timer::after(Duration::from_millis(50)).await;
-
-        defmt::info!("LED off!");
-        control.gpio_set(0, false).await;
-        Timer::after(Duration::from_millis(950)).await;
-    }
+    run::run(spawner, lights).await;
 }
