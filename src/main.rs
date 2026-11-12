@@ -9,6 +9,7 @@ mod photoresistor;
 mod pinout;
 mod rgb_led;
 mod run;
+mod utils;
 
 use cyw43::aligned_bytes;
 use cyw43_pio::{DEFAULT_CLOCK_DIVIDER, PioSpi};
