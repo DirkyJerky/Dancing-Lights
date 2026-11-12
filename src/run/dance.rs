@@ -1,4 +1,4 @@
-use embassy_futures::join::{join_array, join4};
+use embassy_futures::join::join4;
 use embassy_rp::clocks::RoscRng;
 use embassy_time::{Duration, Timer};
 
@@ -82,12 +82,11 @@ async fn flash_arrays(
     loop {
         let rand = rng.next_u32();
 
-        for array in [&mut *bottom, &mut *middle, &mut *top] {
-            array.set_pin(ArrayPin::Bottom, PinState::Low);
-            array.set_pin(ArrayPin::Top, PinState::Low);
-        }
+        for (array, master_offset) in [(&mut *bottom, 0), (&mut *middle, 8), (&mut *top, 16)] {
+            let byte: u8 = ((rand >> master_offset) & 0xFF) as u8;
+            let color_nibble: u8 = (byte >> 4) & 0x0F;
+            let row_nibble: u8 = byte & 0x0F;
 
-        for (array, master_offset) in [(&mut *bottom, 0), (&mut *middle, 4), (&mut *top, 8)] {
             for (pin, bit_offset) in [
                 (ArrayPin::Red, 0),
                 (ArrayPin::Yellow, 1),
@@ -96,13 +95,23 @@ async fn flash_arrays(
             ] {
                 array.set_pin(
                     pin,
-                    if rand & 1u32 << (bit_offset + master_offset) != 0 {
+                    if color_nibble & 1u8 << bit_offset != 0 {
                         PinState::High
                     } else {
-                        PinState::Low
+                        PinState::HighImpedance
                     },
                 );
             }
+
+            let (top_state, bottom_state) = match row_nibble {
+                0..6 => (PinState::HighImpedance, PinState::Low),
+                6..10 => (PinState::Low, PinState::HighImpedance),
+                10..=16 => (PinState::Low, PinState::Low),
+                _ => unreachable!(),
+            };
+
+            array.set_pin(ArrayPin::Top, top_state);
+            array.set_pin(ArrayPin::Bottom, bottom_state);
         }
 
         Timer::after(Duration::from_millis(1000)).await;
