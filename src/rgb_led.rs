@@ -12,7 +12,7 @@ pub enum ColorPin {
 
 pub struct RGBLed<'a> {
     red: Output<'a>,
-    float: Input<'a>,
+    _float: Input<'a>,
     blue: Output<'a>,
     green: Output<'a>,
 }
@@ -26,7 +26,7 @@ impl<'a> RGBLed<'a> {
     ) -> Self {
         Self {
             red: Output::new(red, Level::Low),
-            float: Input::new(float, Pull::None),
+            _float: Input::new(float, Pull::None),
             blue: Output::new(blue, Level::Low),
             green: Output::new(green, Level::Low),
         }

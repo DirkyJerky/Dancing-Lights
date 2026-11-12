@@ -120,6 +120,7 @@ async fn main(spawner: Spawner) {
     };
 
     let ir_led = IRLedPins {
+        slice2: peripherals.PWM_SLICE2,
         vcc: peripherals.PIN_21,
         float: peripherals.PIN_19,
     };

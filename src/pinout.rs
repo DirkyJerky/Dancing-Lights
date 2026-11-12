@@ -66,7 +66,7 @@ use embassy_rp::{
     peripherals::{
         ADC, PIN_0, PIN_1, PIN_2, PIN_3, PIN_4, PIN_5, PIN_6, PIN_7, PIN_8, PIN_9, PIN_10, PIN_11,
         PIN_12, PIN_13, PIN_14, PIN_15, PIN_17, PIN_18, PIN_19, PIN_20, PIN_21, PIN_22, PIN_26,
-        PIN_27, PIN_28,
+        PIN_27, PIN_28, PWM_SLICE2,
     },
 };
 
@@ -150,13 +150,14 @@ impl<'a> Into<RGBLed<'a>> for RGBLedPins {
 }
 
 pub struct IRLedPins {
+    pub slice2: Peri<'static, PWM_SLICE2>,
     pub vcc: Peri<'static, PIN_21>,
     pub float: Peri<'static, PIN_19>,
 }
 
-impl<'a> Into<IRLed<'a>> for IRLedPins {
-    fn into(self) -> IRLed<'a> {
-        IRLed::new(self.vcc, self.float)
+impl<'a> Into<IRLed<'a, PWM_SLICE2>> for IRLedPins {
+    fn into(self) -> IRLed<'a, PWM_SLICE2> {
+        IRLed::new(self.slice2, self.vcc, self.float)
     }
 }
 
@@ -178,7 +179,7 @@ pub struct DancingLights<'a> {
     pub middle_array: LEDArray<'a>,
     pub top_array: LEDArray<'a>,
     pub rgb_led: RGBLed<'a>,
-    pub ir_led: IRLed<'a>,
+    pub ir_led: IRLed<'a, PWM_SLICE2>,
     pub photoresistor: Photoresistor<'a>,
     pub bootsel_button: BootselButton,
 }
