@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 
+mod bootsel;
 mod cyw43_gpio;
 mod ir_led;
 mod led_array;
@@ -19,10 +20,11 @@ use embassy_rp::{
     gpio::{Level, Output},
     peripherals::{DMA_CH0, DMA_CH1, PIO0},
 };
-use embassy_time::{Duration, Timer};
+use embassy_time::Duration;
 use panic_probe as _;
 use static_cell::StaticCell;
 
+use crate::bootsel::{BootselButton, BootselPoller};
 use crate::pinout::{
     DancingLights, IRLedPins, LedArrayPinsBottom, LedArrayPinsMiddle, LedArrayPinsTop,
     PhotoresistorPins, RGBLedPins,
@@ -69,15 +71,19 @@ async fn main(spawner: Spawner) {
         dma::Channel::new(peripherals.DMA_CH0, Irqs),
     );
 
+    let start = embassy_time::Instant::now();
     static STATE: StaticCell<cyw43::State> = StaticCell::new();
     let state = STATE.init(cyw43::State::new());
     let (_net_device, mut control, runner) = cyw43::new(state, pwr, spi, fw, nvram).await;
     spawner.spawn(cyw43_task(runner).unwrap());
+    defmt::debug!("cyw43::new took {} ms", start.elapsed().as_millis());
 
+    let start = embassy_time::Instant::now();
     control.init(clm).await;
     control
         .set_power_management(cyw43::PowerManagementMode::PowerSave)
         .await;
+    defmt::debug!("control.init took {} ms", start.elapsed().as_millis());
 
     let led_array_bottom = LedArrayPinsBottom {
         red: peripherals.PIN_0,
@@ -124,6 +130,11 @@ async fn main(spawner: Spawner) {
         irq: Irqs,
     };
 
+    let (bootsel_button, bootsel_poller) =
+        BootselButton::new(peripherals.BOOTSEL, Duration::from_millis(50));
+
+    spawner.spawn(bootsel_polling(bootsel_poller).unwrap());
+
     let lights: DancingLights<'static> = DancingLights::new(
         control,
         led_array_bottom,
@@ -132,9 +143,15 @@ async fn main(spawner: Spawner) {
         rgb_led,
         ir_led,
         photoresist,
+        bootsel_button,
     );
 
     defmt::info!("Initialized.");
 
     run::run(spawner, lights).await;
+}
+
+#[embassy_executor::task]
+async fn bootsel_polling(poller: BootselPoller<'static>) -> ! {
+    poller.start_polling().await
 }

@@ -15,4 +15,16 @@ impl<'a> IRLed<'a> {
             float: Input::new(float, Pull::None),
         }
     }
+
+    pub fn up(&mut self) {
+        self.vcc.set_high();
+    }
+
+    pub fn down(&mut self) {
+        self.vcc.set_low();
+    }
+
+    pub fn reset(&mut self) {
+        self.down();
+    }
 }

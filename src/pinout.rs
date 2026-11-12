@@ -53,7 +53,10 @@
 //!
 //!
 
-use crate::{cyw43_gpio::Cyw43_GPIO, ir_led::IRLed, photoresistor::Photoresistor, rgb_led::RGBLed};
+use crate::{
+    bootsel::BootselButton, cyw43_gpio::Cyw43_GPIO, ir_led::IRLed, photoresistor::Photoresistor,
+    rgb_led::RGBLed,
+};
 
 use super::led_array::LEDArray;
 
@@ -177,6 +180,7 @@ pub struct DancingLights<'a> {
     pub rgb_led: RGBLed<'a>,
     pub ir_led: IRLed<'a>,
     pub photoresistor: Photoresistor<'a>,
+    pub bootsel_button: BootselButton,
 }
 
 impl<'a> DancingLights<'a> {
@@ -188,6 +192,7 @@ impl<'a> DancingLights<'a> {
         rgb_led: RGBLedPins,
         ir_led: IRLedPins,
         photoresistor: PhotoresistorPins,
+        bootsel_button: BootselButton,
     ) -> DancingLights<'a> {
         DancingLights {
             cyw43_control: Cyw43_GPIO::new(cyw43_control),
@@ -197,6 +202,16 @@ impl<'a> DancingLights<'a> {
             rgb_led: rgb_led.into(),
             ir_led: ir_led.into(),
             photoresistor: photoresistor.into(),
+            bootsel_button,
         }
+    }
+
+    pub async fn reset(&mut self) {
+        self.cyw43_control.reset().await;
+        self.bottom_array.reset();
+        self.middle_array.reset();
+        self.top_array.reset();
+        self.rgb_led.reset();
+        self.ir_led.reset();
     }
 }

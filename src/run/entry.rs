@@ -1,9 +1,90 @@
 use embassy_executor::Spawner;
+use embassy_futures::select::select;
 
-use crate::pinout::DancingLights;
+use crate::{bootsel::ButtonChangeState, pinout::DancingLights};
 
 use super::dance::run as dance;
+use super::off::run as off;
+use super::on::run as on;
 
-pub async fn run(spawner: Spawner, lights: DancingLights<'static>) -> ! {
-    dance(spawner, lights).await
+#[derive(Debug, Clone, Copy)]
+enum Mode {
+    Dance,
+    On,
+    Off,
+}
+
+impl Mode {
+    const ALL: [Mode; 3] = [Mode::Dance, Mode::On, Mode::Off];
+
+    async fn run(&self, lights: &mut DancingLights<'static>) {
+        match self {
+            Mode::Dance => dance(lights).await,
+            Mode::On => on(lights).await,
+            Mode::Off => off(lights).await,
+        }
+    }
+}
+
+impl defmt::Format for Mode {
+    fn format(&self, fmt: defmt::Formatter) {
+        match self {
+            Mode::Dance => defmt::write!(fmt, "Dance"),
+            Mode::On => defmt::write!(fmt, "On"),
+            Mode::Off => defmt::write!(fmt, "Off"),
+        }
+    }
+}
+
+struct ArrayRotation<'a, T> {
+    array: &'a [T],
+    next_index: usize,
+}
+
+impl<'a, T> ArrayRotation<'a, T> {
+    fn new(array: &'a [T]) -> Self {
+        ArrayRotation {
+            array,
+            next_index: 0,
+        }
+    }
+
+    fn next(&mut self) -> &T {
+        let curr_index = self.next_index;
+
+        self.next_index += 1;
+        if self.next_index >= self.array.len() {
+            self.next_index = 0;
+        }
+
+        &self.array[curr_index]
+    }
+}
+
+pub async fn run(_spawner: Spawner, mut lights: DancingLights<'static>) -> ! {
+    let mut rotation = ArrayRotation::new(&Mode::ALL);
+    let mut button_reciever = lights
+        .bootsel_button
+        .receiver()
+        .expect("Reciever should be available.");
+
+    loop {
+        lights.reset().await;
+        select(
+            async {
+                loop {
+                    match (button_reciever).changed().await {
+                        ButtonChangeState::Falling => return,
+                        ButtonChangeState::Rising => continue,
+                    }
+                }
+            },
+            async {
+                let mode = rotation.next();
+                defmt::info!("Mode: {}", mode);
+                mode.run(&mut lights).await;
+            },
+        )
+        .await;
+    }
 }

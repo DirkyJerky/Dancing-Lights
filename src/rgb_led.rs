@@ -45,4 +45,10 @@ impl<'a> RGBLed<'a> {
             output.set_low();
         }
     }
+
+    pub fn reset(&mut self) {
+        self.set_pin(ColorPin::Red, false);
+        self.set_pin(ColorPin::Green, false);
+        self.set_pin(ColorPin::Blue, false);
+    }
 }

@@ -84,7 +84,7 @@ impl<'a> LEDArray<'a> {
         set_state(pin, state);
     }
 
-    pub fn blank(&mut self) {
+    pub fn reset(&mut self) {
         for pin in [
             &mut self.red,
             &mut self.yellow,
