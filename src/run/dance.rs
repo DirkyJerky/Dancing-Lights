@@ -1,5 +1,5 @@
 use embassy_futures::join::{join, join4};
-use embassy_rp::{clocks::RoscRng, peripherals::PWM_SLICE2};
+use embassy_rp::clocks::RoscRng;
 use embassy_time::{Duration, Timer};
 
 use crate::{
@@ -8,7 +8,7 @@ use crate::{
     led_array::{ArrayPin, LEDArray, PinState},
     photoresistor::Photoresistor,
     pinout::DancingLights,
-    rgb_led::{ColorPin, RGBLed},
+    rgb_led::RGBLed,
     utils::trig,
 };
 
@@ -65,7 +65,7 @@ async fn read_photoresistor(photoresistor: &mut Photoresistor<'static>) -> ! {
 /// with a period of two seconds
 ///
 /// Note: Gamma correction may be necessary
-async fn fade_ir(ir: &mut IRLed<'static, PWM_SLICE2>) {
+async fn fade_ir(ir: &mut IRLed<'static>) {
     const MIN: u16 = u16::MAX / 4;
     const MAX: u16 = u16::MAX / 4 * 3;
 
@@ -96,11 +96,11 @@ async fn strobe_rgb(rgb: &mut RGBLed<'static>) -> ! {
     let mut rng = RoscRng;
 
     loop {
-        let rand = rng.next_u32();
-
-        rgb.set_pin(ColorPin::Red, rand & 1u32 << 0 != 0);
-        rgb.set_pin(ColorPin::Green, rand & 1u32 << 1 != 0);
-        rgb.set_pin(ColorPin::Blue, rand & 1u32 << 2 != 0);
+        rgb.set(
+            rng.next_u32() as u16,
+            rng.next_u32() as u16,
+            rng.next_u32() as u16,
+        );
 
         Timer::after(Duration::from_millis(500)).await;
     }

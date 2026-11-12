@@ -3,7 +3,6 @@ use core::future::pending;
 use crate::{
     led_array::{ArrayPin, PinState},
     pinout::DancingLights,
-    rgb_led::ColorPin,
 };
 
 pub async fn run(lights: &mut DancingLights<'static>) -> ! {
@@ -28,10 +27,7 @@ pub async fn run(lights: &mut DancingLights<'static>) -> ! {
         array.set_pin(ArrayPin::Top, PinState::Low);
     }
 
-    rgb_led.set_pin(ColorPin::Red, true);
-    rgb_led.set_pin(ColorPin::Green, true);
-    rgb_led.set_pin(ColorPin::Blue, true);
-
+    rgb_led.up();
     ir_led.up();
 
     pending::<()>().await;

@@ -118,6 +118,8 @@ async fn main(spawner: Spawner) {
         float: peripherals.PIN_13,
         blue: peripherals.PIN_14,
         green: peripherals.PIN_15,
+        r_slice: peripherals.PWM_SLICE6,
+        gb_slice: peripherals.PWM_SLICE7,
     };
 
     let ir_led = IRLedPins {
