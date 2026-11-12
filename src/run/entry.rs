@@ -15,7 +15,12 @@ enum Mode {
 }
 
 impl Mode {
-    const ALL: [Mode; 3] = [Mode::Dance, Mode::On, Mode::Off];
+    const ENABLED_MODES: [Mode; 3] = [
+        // Enabled modes
+        Mode::Dance,
+        Mode::On,
+        Mode::Off,
+    ];
 
     async fn run(&self, lights: &mut DancingLights<'static>) {
         match self {
@@ -62,7 +67,7 @@ impl<'a, T> ArrayRotation<'a, T> {
 }
 
 pub async fn run(_spawner: Spawner, mut lights: DancingLights<'static>) -> ! {
-    let mut rotation = ArrayRotation::new(&Mode::ALL);
+    let mut rotation = ArrayRotation::new(&Mode::ENABLED_MODES);
     let mut button_reciever = lights
         .bootsel_button
         .receiver()

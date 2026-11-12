@@ -1,13 +1,15 @@
-use embassy_futures::join::join4;
-use embassy_rp::clocks::RoscRng;
+use embassy_futures::join::{join, join4};
+use embassy_rp::{clocks::RoscRng, peripherals::PWM_SLICE2};
 use embassy_time::{Duration, Timer};
 
 use crate::{
     cyw43_gpio::Cyw43_GPIO,
+    ir_led::IRLed,
     led_array::{ArrayPin, LEDArray, PinState},
     photoresistor::Photoresistor,
     pinout::DancingLights,
     rgb_led::{ColorPin, RGBLed},
+    run::utils::trig,
 };
 
 pub async fn run(lights: &mut DancingLights<'static>) -> ! {
@@ -26,7 +28,10 @@ pub async fn run(lights: &mut DancingLights<'static>) -> ! {
         blink(cyw43_control),
         read_photoresistor(photoresistor),
         strobe_rgb(rgb_led),
-        flash_arrays(bottom_array, middle_array, top_array),
+        join(
+            flash_arrays(bottom_array, middle_array, top_array),
+            fade_ir(ir_led),
+        ),
     )
     .await;
 
@@ -53,6 +58,36 @@ async fn read_photoresistor(photoresistor: &mut Photoresistor<'static>) -> ! {
         }
 
         Timer::after(Duration::from_millis(1000)).await;
+    }
+}
+
+/// Cycle the IR Led duty cycle through a sine wave
+/// with a period of two seconds
+///
+/// Note: Gamma correction may be necessary
+async fn fade_ir(ir: &mut IRLed<'static, PWM_SLICE2>) {
+    const MIN: u16 = u16::MAX / 8;
+    const MAX: u16 = u16::MAX / 2;
+
+    let mut step = 0u32;
+    let amplitude = (MAX - MIN) / 2;
+    let midpoint = MIN + amplitude;
+
+    loop {
+        // 200 samples at 10 ms each gives a two-second cycle.
+        let phase = step * (u32::MAX / 200);
+        let sine = trig::sin(phase);
+
+        // Scale the signed sine to roughly -65535..65535 before multiplying
+        // by the duty-cycle amplitude, keeping the math within 32 bits.
+        let normalized_sine = sine / 32_768;
+        let duty_offset = normalized_sine * amplitude as i32 / u16::MAX as i32;
+        let duty_cycle = (midpoint as i32 + duty_offset) as u16;
+
+        ir.set_duty_cycle(duty_cycle);
+
+        step = (step + 1) % 200;
+        Timer::after(Duration::from_millis(10)).await;
     }
 }
 
