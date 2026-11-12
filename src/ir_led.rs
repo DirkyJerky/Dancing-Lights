@@ -37,15 +37,23 @@ impl<'a, S: Slice> IRLed<'a, S> {
     }
 
     pub fn up(&mut self) {
-        if let Err(err) = self.pwm.set_duty_cycle_fully_on() {}
+        self.set_duty_cycle(u16::MAX);
     }
 
     pub fn down(&mut self) {
-        if let Err(err) = self.pwm.set_duty_cycle_fully_off() {}
+        self.set_duty_cycle(0);
     }
 
     pub fn set_duty_cycle(&mut self, duty_cycle: u16) {
-        if let Err(err) = self.pwm.set_duty_cycle_fraction(duty_cycle, u16::MAX) {}
+        if let Err(_err) = self.pwm.set_duty_cycle_fraction(duty_cycle, u16::MAX) {
+            defmt::debug!("Error setting duty cycle");
+        }
+    }
+
+    /// Set perceived brightness after applying gamma 2.2 correction.
+    pub fn set_brightness(&mut self, brightness: u16) {
+        let corrected_duty = crate::utils::gamma::gamma22(brightness);
+        self.set_duty_cycle(corrected_duty);
     }
 
     pub fn reset(&mut self) {

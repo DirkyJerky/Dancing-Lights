@@ -9,7 +9,7 @@ use crate::{
     photoresistor::Photoresistor,
     pinout::DancingLights,
     rgb_led::{ColorPin, RGBLed},
-    run::utils::trig,
+    utils::trig,
 };
 
 pub async fn run(lights: &mut DancingLights<'static>) -> ! {
@@ -66,8 +66,8 @@ async fn read_photoresistor(photoresistor: &mut Photoresistor<'static>) -> ! {
 ///
 /// Note: Gamma correction may be necessary
 async fn fade_ir(ir: &mut IRLed<'static, PWM_SLICE2>) {
-    const MIN: u16 = u16::MAX / 8;
-    const MAX: u16 = u16::MAX / 2;
+    const MIN: u16 = u16::MAX / 4;
+    const MAX: u16 = u16::MAX / 4 * 3;
 
     let mut step = 0u32;
     let amplitude = (MAX - MIN) / 2;
@@ -84,7 +84,7 @@ async fn fade_ir(ir: &mut IRLed<'static, PWM_SLICE2>) {
         let duty_offset = normalized_sine * amplitude as i32 / u16::MAX as i32;
         let duty_cycle = (midpoint as i32 + duty_offset) as u16;
 
-        ir.set_duty_cycle(duty_cycle);
+        ir.set_brightness(duty_cycle);
 
         step = (step + 1) % 200;
         Timer::after(Duration::from_millis(10)).await;
