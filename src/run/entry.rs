@@ -4,6 +4,7 @@ use embassy_futures::select::select;
 use crate::{bootsel::ButtonChangeState, pinout::DancingLights};
 
 use super::dance::run as dance;
+use super::feedback::run as feedback;
 use super::off::run as off;
 use super::on::run as on;
 
@@ -12,14 +13,16 @@ enum Mode {
     Dance,
     On,
     Off,
+    Feedback,
 }
 
 impl Mode {
-    const ENABLED_MODES: [Mode; 3] = [
+    const ENABLED_MODES: [Mode; 4] = [
         // Enabled modes
         Mode::Dance,
         Mode::On,
         Mode::Off,
+        Mode::Feedback,
     ];
 
     async fn run(&self, lights: &mut DancingLights<'static>) {
@@ -27,6 +30,7 @@ impl Mode {
             Mode::Dance => dance(lights).await,
             Mode::On => on(lights).await,
             Mode::Off => off(lights).await,
+            Mode::Feedback => feedback(lights).await,
         }
     }
 }
@@ -37,6 +41,7 @@ impl defmt::Format for Mode {
             Mode::Dance => defmt::write!(fmt, "Dance"),
             Mode::On => defmt::write!(fmt, "On"),
             Mode::Off => defmt::write!(fmt, "Off"),
+            Mode::Feedback => defmt::write!(fmt, "Feedback"),
         }
     }
 }

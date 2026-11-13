@@ -44,4 +44,6 @@ impl<'a> RGBLed<'a> {
     pub fn reset(&mut self) {
         self.set(0, 0, 0)
     }
+
+    pub fn set_hsl(&mut self) {}
 }

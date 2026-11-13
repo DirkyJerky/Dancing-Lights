@@ -10,16 +10,20 @@ impl Cyw43_GPIO {
     }
 
     pub async fn up(&mut self, pin: u8) {
-        self.control.gpio_set(pin, true).await;
+        if pin < 3 {
+            self.control.gpio_set(pin, true).await;
+        }
     }
 
     pub async fn down(&mut self, pin: u8) {
-        self.control.gpio_set(pin, false).await;
+        if pin < 3 {
+            self.control.gpio_set(pin, false).await;
+        }
     }
 
     pub async fn reset(&mut self) {
-        for i in 0..8 {
-            self.down(i).await;
-        }
+        self.down(0).await;
+        self.down(1).await;
+        self.down(2).await;
     }
 }
