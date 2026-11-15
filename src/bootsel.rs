@@ -1,4 +1,3 @@
-use cyw43::Control;
 use embassy_rp::{
     Peri, bootsel::is_bootsel_pressed, peripherals::BOOTSEL, spinlock_mutex::SpinlockRawMutex,
 };
@@ -12,14 +11,19 @@ type MUTEX = SpinlockRawMutex<SPINLOCK_ID>;
 
 static WATCH: Watch<MUTEX, ButtonChangeState, WATCHER_COUNT> = Watch::new();
 
+/// Button state change event
 #[derive(Debug, Clone, Copy)]
 pub enum ButtonChangeState {
+    /// Button is pressed
     Rising,
+    /// Button is released
     Falling,
 }
 
+/// Handler for listening to BOOTSEL button change events
 pub struct BootselButton;
 
+/// Async poller for monitoring BOOTSEL button state
 pub struct BootselPoller<'a> {
     button: Peri<'static, BOOTSEL>,
     sender: Sender<'a, MUTEX, ButtonChangeState, WATCHER_COUNT>,
@@ -28,6 +32,7 @@ pub struct BootselPoller<'a> {
 }
 
 impl<'a> BootselPoller<'a> {
+    /// Construct a new poller, given references to the button peripheral and the channel sender.
     fn new(
         mut button: Peri<'static, BOOTSEL>,
         sender: Sender<'a, MUTEX, ButtonChangeState, WATCHER_COUNT>,
@@ -42,6 +47,7 @@ impl<'a> BootselPoller<'a> {
         }
     }
 
+    /// Begin polling the button state according to the configured frequency
     pub async fn start_polling(mut self) -> ! {
         loop {
             let current_state = is_bootsel_pressed(self.button.reborrow());
@@ -62,6 +68,7 @@ impl<'a> BootselPoller<'a> {
 }
 
 impl BootselButton {
+    /// Construct a new button and poller instance
     pub fn new(button: Peri<'static, BOOTSEL>, poll_frequency: Duration) -> (Self, BootselPoller) {
         let poller: BootselPoller<'static> =
             BootselPoller::new(button, WATCH.sender(), poll_frequency);
@@ -69,6 +76,7 @@ impl BootselButton {
         (Self {}, poller)
     }
 
+    /// Create a reciever, if enough unused references are available.
     pub fn receiver(
         &mut self,
     ) -> Option<Receiver<'static, MUTEX, ButtonChangeState, WATCHER_COUNT>> {

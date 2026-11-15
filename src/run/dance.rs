@@ -1,9 +1,14 @@
+//! Make the colors dance!
+//!
+//! Randomizes the output of all perpiherals, according
+//! to the provided runner functions, which execute in parallel
+
 use embassy_futures::join::{join, join4};
 use embassy_rp::clocks::RoscRng;
 use embassy_time::{Duration, Timer};
 
 use crate::{
-    cyw43_gpio::Cyw43_GPIO,
+    cyw43_gpio::{Cyw43Gpio, Cyw43GpioPin},
     ir_led::IRLed,
     led_array::{ArrayPin, LEDArray, PinState},
     photoresistor::Photoresistor,
@@ -39,12 +44,12 @@ pub async fn run(lights: &mut DancingLights<'static>) -> ! {
 }
 
 /// Blink the onboard LED using the GPIO pin through the wireless chip
-async fn blink(cyw43_control: &mut Cyw43_GPIO) -> ! {
+async fn blink(cyw43_control: &mut Cyw43Gpio) -> ! {
     loop {
-        cyw43_control.up(0).await;
+        cyw43_control.up(Cyw43GpioPin::LED).await;
         Timer::after(Duration::from_millis(50)).await;
 
-        cyw43_control.down(0).await;
+        cyw43_control.down(Cyw43GpioPin::LED).await;
         Timer::after(Duration::from_millis(950)).await;
     }
 }

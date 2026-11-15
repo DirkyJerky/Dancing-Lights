@@ -54,7 +54,7 @@
 //!
 
 use crate::{
-    bootsel::BootselButton, cyw43_gpio::Cyw43_GPIO, ir_led::IRLed, photoresistor::Photoresistor,
+    bootsel::BootselButton, cyw43_gpio::Cyw43Gpio, ir_led::IRLed, photoresistor::Photoresistor,
     rgb_led::RGBLed,
 };
 
@@ -183,7 +183,7 @@ impl<'a> Into<Photoresistor<'a>> for PhotoresistorPins {
 }
 
 pub struct DancingLights<'a> {
-    pub cyw43_control: Cyw43_GPIO,
+    pub cyw43_control: Cyw43Gpio,
     pub bottom_array: LEDArray<'a>,
     pub middle_array: LEDArray<'a>,
     pub top_array: LEDArray<'a>,
@@ -205,7 +205,7 @@ impl<'a> DancingLights<'a> {
         bootsel_button: BootselButton,
     ) -> DancingLights<'a> {
         DancingLights {
-            cyw43_control: Cyw43_GPIO::new(cyw43_control),
+            cyw43_control: Cyw43Gpio::new(cyw43_control),
             bottom_array: bottom_array.into(),
             middle_array: middle_array.into(),
             top_array: top_array.into(),

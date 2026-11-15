@@ -1,3 +1,5 @@
+//! Turns all peripherals off
+//!
 use core::future::pending;
 
 use crate::pinout::DancingLights;

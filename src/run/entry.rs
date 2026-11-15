@@ -1,3 +1,7 @@
+//! Main execution loop runner
+//!
+//! Runs after all component initalization has been performed.
+
 use embassy_executor::Spawner;
 use embassy_futures::select::select;
 
@@ -8,6 +12,7 @@ use super::feedback::run as feedback;
 use super::off::run as off;
 use super::on::run as on;
 
+/// The runtime modes supported by this runner
 #[derive(Debug, Clone, Copy)]
 enum Mode {
     Dance,
@@ -17,6 +22,7 @@ enum Mode {
 }
 
 impl Mode {
+    /// The list of runtime modes that can be cycled through
     const ENABLED_MODES: [Mode; 4] = [
         // Enabled modes
         Mode::Dance,
@@ -25,6 +31,7 @@ impl Mode {
         Mode::Feedback,
     ];
 
+    /// Runs a specific mode, given a reference to the DancingLights construct
     async fn run(&self, lights: &mut DancingLights<'static>) {
         match self {
             Mode::Dance => dance(lights).await,
@@ -46,6 +53,8 @@ impl defmt::Format for Mode {
     }
 }
 
+/// A helper for rotating through the values in a fixed length array,
+/// with wrap around
 struct ArrayRotation<'a, T> {
     array: &'a [T],
     next_index: usize,
@@ -59,6 +68,8 @@ impl<'a, T> ArrayRotation<'a, T> {
         }
     }
 
+    /// Gets the next value in the array, potentionally wrapping
+    /// to the first element if necessary
     fn next(&mut self) -> &T {
         let curr_index = self.next_index;
 
@@ -71,6 +82,10 @@ impl<'a, T> ArrayRotation<'a, T> {
     }
 }
 
+/// Run the supported runtime modes
+///
+/// Runs the first mode specified in the `ENABLED_MODES` list,
+/// cycling to the next mode in order whenever the BOOTSEL button is pressed
 pub async fn run(_spawner: Spawner, mut lights: DancingLights<'static>) -> ! {
     let mut rotation = ArrayRotation::new(&Mode::ENABLED_MODES);
     let mut button_reciever = lights

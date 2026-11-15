@@ -1,6 +1,10 @@
+//! Turns all peripherals on
+//!
+
 use core::future::pending;
 
 use crate::{
+    cyw43_gpio::Cyw43GpioPin,
     led_array::{ArrayPin, PinState},
     pinout::DancingLights,
 };
@@ -17,7 +21,7 @@ pub async fn run(lights: &mut DancingLights<'static>) -> ! {
         bootsel_button,
     } = lights;
 
-    cyw43_control.up(0).await;
+    cyw43_control.up(Cyw43GpioPin::LED).await;
     for array in [&mut *bottom_array, &mut *middle_array, &mut *top_array] {
         array.set_pin(ArrayPin::Red, PinState::High);
         array.set_pin(ArrayPin::Yellow, PinState::High);

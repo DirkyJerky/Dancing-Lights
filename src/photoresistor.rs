@@ -6,12 +6,17 @@ use embassy_rp::{
     peripherals::ADC,
 };
 
+/// A photoresistor read by an ADC controller
+/// The photo resistor is set up as part of a voltage divider with a 10K resistor,
+/// which normalizes the reading range to roughly (400..4000)
 pub struct Photoresistor<'a> {
     adc: Adc<'a, Async>,
     channel: Channel<'a>,
 }
 
 impl<'a> Photoresistor<'a> {
+    /// Construct a new photo resistor watcher,
+    /// by configuring the provided ADC peripheral and channel
     pub fn new(
         adc: Peri<'a, ADC>,
         pin: Peri<'a, impl AdcPin + 'a>,
@@ -23,6 +28,7 @@ impl<'a> Photoresistor<'a> {
         }
     }
 
+    /// Read the current value of the photoresistor
     pub async fn read(&mut self) -> Result<u16, Error> {
         self.adc.read(&mut self.channel).await
     }

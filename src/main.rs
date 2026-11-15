@@ -31,12 +31,14 @@ use crate::pinout::{
     PhotoresistorPins, RGBLedPins,
 };
 
+/// Setup the ADC, PIO, and DMA interrupts for further operations
 bind_interrupts!(struct Irqs {
     ADC_IRQ_FIFO => embassy_rp::adc::InterruptHandler;
     PIO0_IRQ_0 => InterruptHandler<PIO0>;
     DMA_IRQ_0 => dma::InterruptHandler<DMA_CH0>, dma::InterruptHandler<DMA_CH1>;
 });
 
+/// Runs the Cyw43 wireless chip operations
 #[embassy_executor::task]
 async fn cyw43_task(
     runner: cyw43::Runner<'static, cyw43::SpiBus<Output<'static>, PioSpi<'static, PIO0, 0>>>,
@@ -44,6 +46,19 @@ async fn cyw43_task(
     runner.run().await
 }
 
+/// Checks the BOOTSEL button on a loop, reporting its state
+#[embassy_executor::task]
+async fn bootsel_polling(poller: BootselPoller<'static>) -> ! {
+    poller.start_polling().await
+}
+
+/// Main entry point.
+/// Performs the following
+/// - Configures PIO communicates for SPI
+/// - Loads the cyw43 firmware over the PIO channel
+/// - Captures the necessary perhiperals for the system controllers
+/// - Constructs the controllers and collects them into a `DancingLights` collection
+/// - Delegates execution to [`crate::run::entry::run()`]
 #[embassy_executor::main(
     executor = "embassy_rp::executor::Executor",
     entry = "cortex_m_rt::entry"
@@ -153,9 +168,4 @@ async fn main(spawner: Spawner) {
     defmt::info!("Initialized.");
 
     run::run(spawner, lights).await;
-}
-
-#[embassy_executor::task]
-async fn bootsel_polling(poller: BootselPoller<'static>) -> ! {
-    poller.start_polling().await
 }

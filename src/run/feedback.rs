@@ -1,3 +1,15 @@
+//! Runs a PID controller, displaying
+//! all the P/I/D values during operation on the LED arrays
+//!
+//! The plant is the IR Led,
+//! and the sensor is the Photoresist.
+//!
+//! This controller attempts to set the photoresist value
+//! to a reading slightly above the passive light level in my apartment.
+//!
+//! By phyiscally varying the distance of the IR Led to the photoresist, this controller
+//! will demonstrate its behavior via the realtime response guages.
+
 use core::future::pending;
 
 use embassy_futures::join::join;
@@ -45,16 +57,38 @@ pub async fn run(lights: &mut DancingLights<'static>) -> ! {
         bootsel_button,
     } = lights;
 
-    const KP: N = N::lit("0.001");
-    const KI: N = N::lit("0.1");
-    const KD: N = N::lit("0.0001");
-    const GAINS: Gains = Gains::new(KP, KI, KD);
+    // Gain values that are intentionally underdamped,
+    // to show intentional oscillation
+    const UNDERDAMPED_GAINS: Gains = {
+        const KP: N = N::lit("0.001");
+        const KI: N = N::lit("0.1");
+        const KD: N = N::lit("0.0001");
+        Gains::new(KP, KI, KD)
+    }
 
+    // Gain values that are calibrated
+    // to respond efficiently without overshooting
+    const CALIBRATED_GAINS: Gains = {
+        const KP: N = N::lit("0.001");
+        const KI: N = N::lit("0.1");
+        const KD: N = N::lit("0.0001");
+        Gains::new(KP, KI, KD)
+    }
+
+    const GAINS: Gains = CALIBRATED_GAINS;
+
+    /// Integral limits for internal PID operation
     const I_LIMITS: Limits = Limits::new(N::lit("-1.0"), N::lit("1.0")).unwrap();
+    /// Output limits for the PID controller, mapped directly to IR Led brightness control
     const OUTPUT_LIMITS: Limits = Limits::new(N::lit("0.0"), N::lit("1.0")).unwrap();
+    /// The min/max values used for the Integral guage display
     const I_GAUGE_LIMITS: Limits = I_LIMITS;
-    // Room light level reads ~1700, so lets target a bit higher than that
-    const TARGET: u16 = 2000;
+    /// The target reading on the sensor
+    /// Myoom light level reads ~1700 at night, ~2500 at day
+    /// So lets target a bit higher than that
+    const TARGET: u16 = 2750;
+
+    // Calculate the P guage limits
     const ADC_MAX: u16 = 4095;
     const MIN_SAMPLE_PERIOD_SECS: N = N::lit("0.01");
     const MIN_D_GAUGE_SPAN: N = N::lit("0.1");
@@ -70,7 +104,8 @@ pub async fn run(lights: &mut DancingLights<'static>) -> ! {
     )
     .expect("ADC range must produce a non-zero P range");
 
-    // Do the same for D's guage
+    // Calculate the D guage limits
+    //
     // D = -kd * delta(measurement) / dt. Use the full ADC range and the
     // shortest expected interval to estimate the max value.
     let sensor_span = encode_resistor_reading(ADC_MAX) - encode_resistor_reading(0);
@@ -81,12 +116,15 @@ pub async fn run(lights: &mut DancingLights<'static>) -> ! {
     let d_gauge_limits =
         Limits::new(-d_max, d_max).expect("D gauge span must be greater than zero");
 
+    // Construct the PID controller
     let pid: PID = PID::new(setpoint, I_LIMITS, OUTPUT_LIMITS, GAINS);
 
+    // Set up the guages
     let mut guage_p: ArrayGuage = ArrayGuage::new(p_gauge_limits, top_array);
     let mut guage_i: ArrayGuage = ArrayGuage::new(I_GAUGE_LIMITS, middle_array);
     let mut guage_d: ArrayGuage = ArrayGuage::new(d_gauge_limits, bottom_array);
 
+    // Run the feedback loop
     join(
         watch_photoresist(pid, ir_led, &mut guage_p, &mut guage_i, &mut guage_d),
         poll_photoresist(photoresistor),
@@ -97,7 +135,7 @@ pub async fn run(lights: &mut DancingLights<'static>) -> ! {
     unreachable!()
 }
 
-// Converts an LED array into a display guage, showing a values range with a set Limits
+/// Converts an LED array into a display guage, showing a values range within an expected Limit range
 struct ArrayGuage<'b, 'peri> {
     limits: Limits,
     array: &'b mut LEDArray<'peri>,
@@ -110,6 +148,7 @@ impl<'b, 'peri> ArrayGuage<'b, 'peri> {
         Self { limits, array }
     }
 
+    /// Set the guage level according to the provided value
     pub fn set(&mut self, val: N) {
         let low = self.limits.low();
         let high = self.limits.high();
@@ -133,6 +172,11 @@ impl<'b, 'peri> ArrayGuage<'b, 'peri> {
     }
 }
 
+/// Watch the photoresistor values,
+/// updating the PID controller and setting the IR LED brightness according
+/// to the controller's response
+///
+/// Also updates the ArrayGuages with the PID's component values
 async fn watch_photoresist<'a>(
     mut pid: PID,
     ir_led: &mut IRLed<'a>,
@@ -164,6 +208,7 @@ async fn watch_photoresist<'a>(
     }
 }
 
+/// Report the photo resistor's value
 async fn poll_photoresist<'a>(photoresist: &mut Photoresistor<'a>) {
     let sender = WATCH.sender();
 

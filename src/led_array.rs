@@ -3,6 +3,7 @@ use embassy_rp::{
     gpio::{Flex, Pin, Pull},
 };
 
+/// Possible states of the pins in the LED Array
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PinState {
     High,
@@ -10,16 +11,24 @@ pub enum PinState {
     HighImpedance,
 }
 
+/// Pins in the array that can be referenced
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ArrayPin {
+    /// Red row
     Red,
+    /// Yellow row
     Yellow,
+    /// Green row
     Green,
+    /// Blue row
     Blue,
+    /// Bottom column (towards bottom of breadboard)
     Bottom,
+    /// Top column (towards top of breadboard)
     Top,
 }
 
+/// Set the state of an individual pin
 fn set_state(pin: &mut Flex<'_>, state: PinState) {
     match state {
         PinState::High => {
@@ -38,12 +47,24 @@ fn set_state(pin: &mut Flex<'_>, state: PinState) {
     }
 }
 
+/// Setup a pin as a floating pin, that can switch between input and output modes
 fn floating_pin<'a>(pin: Peri<'a, impl Pin>) -> Flex<'a> {
     let mut pin = Flex::new(pin);
     set_state(&mut pin, PinState::HighImpedance);
     pin
 }
 
+/// A 2x4 addressable LED array
+///
+/// Each LED array consists of 4 rows, each row consisting of two LEDs of a single color.
+/// In order, the color rows are:
+/// - Red
+/// - Yellow
+/// - Green
+/// - Blue
+///
+/// Each row of colors and also the top/bottom columns are individually addressable
+///
 pub struct LEDArray<'a> {
     red: Flex<'a>,
     yellow: Flex<'a>,
@@ -54,6 +75,7 @@ pub struct LEDArray<'a> {
 }
 
 impl<'a> LEDArray<'a> {
+    /// Create a new LED array from the referenced pins
     pub fn new(
         red: Peri<'a, impl Pin>,
         yellow: Peri<'a, impl Pin>,
@@ -72,6 +94,7 @@ impl<'a> LEDArray<'a> {
         }
     }
 
+    /// Set a specific pin to the provided state
     pub fn set_pin(&mut self, pin: ArrayPin, state: PinState) {
         let pin = match pin {
             ArrayPin::Red => &mut self.red,
@@ -84,6 +107,7 @@ impl<'a> LEDArray<'a> {
         set_state(pin, state);
     }
 
+    /// Reset all pins to HighImpedance
     pub fn reset(&mut self) {
         for pin in [
             &mut self.red,
