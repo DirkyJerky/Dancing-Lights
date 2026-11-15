@@ -7,7 +7,7 @@ use fixed::{Saturating, types::extra::U24};
 // Fractional type with 8 bit integer component and 24 bit fractional component
 pub type N = fixed::FixedI32<U24>;
 // Its saturating version, used for internal calculations
-type SN = Saturating<N>;
+pub type SN = Saturating<N>;
 
 /// PID Limits
 #[derive(Debug, Clone, Copy)]

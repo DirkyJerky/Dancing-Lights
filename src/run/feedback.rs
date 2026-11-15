@@ -23,7 +23,7 @@ use crate::{
     led_array::{ArrayPin, LEDArray, PinState},
     photoresistor::Photoresistor,
     pinout::DancingLights,
-    utils::int_pid::{Gains, Limits, N, PID},
+    utils::int_pid::{Gains, Limits, N, PID, SN},
 };
 
 static SPINLOCK_ID: usize = 1;
@@ -37,12 +37,12 @@ static WATCH: Watch<MUTEX, u16, WATCHER_COUNT> = Watch::new();
 // We are going to scale down that range to fit in the range of N::MAX (roughly ~128)
 // By dividing by 32, the range becomes roughly 12 - 125
 const SCALE: u16 = 32;
-fn encode_resistor_reading(val: u16) -> N {
+fn encode_resistor_reading(val: u16) -> SN {
     let whole = val / SCALE;
     let remainder = val % SCALE;
 
-    N::saturating_from_num(whole)
-        + N::saturating_from_num(remainder) / N::saturating_from_num(SCALE)
+    Saturating(N::saturating_from_num(whole))
+        + Saturating(N::saturating_from_num(remainder)) / Saturating(N::saturating_from_num(SCALE))
 }
 
 pub async fn run(lights: &mut DancingLights<'static>) -> ! {
@@ -64,16 +64,16 @@ pub async fn run(lights: &mut DancingLights<'static>) -> ! {
         const KI: N = N::lit("0.1");
         const KD: N = N::lit("0.0001");
         Gains::new(KP, KI, KD)
-    }
+    };
 
     // Gain values that are calibrated
     // to respond efficiently without overshooting
     const CALIBRATED_GAINS: Gains = {
-        const KP: N = N::lit("0.001");
-        const KI: N = N::lit("0.1");
-        const KD: N = N::lit("0.0001");
+        const KP: N = N::lit("0.0005");
+        const KI: N = N::lit("0.0");
+        const KD: N = N::lit("0.00");
         Gains::new(KP, KI, KD)
-    }
+    };
 
     const GAINS: Gains = CALIBRATED_GAINS;
 
@@ -90,17 +90,17 @@ pub async fn run(lights: &mut DancingLights<'static>) -> ! {
 
     // Calculate the P guage limits
     const ADC_MAX: u16 = 4095;
-    const MIN_SAMPLE_PERIOD_SECS: N = N::lit("0.01");
-    const MIN_D_GAUGE_SPAN: N = N::lit("0.1");
-    let setpoint: N = encode_resistor_reading(TARGET);
+    const MIN_SAMPLE_PERIOD_SECS: SN = Saturating(N::lit("0.01"));
+    const MIN_D_GAUGE_SPAN: SN = Saturating(N::lit("0.1"));
+    let setpoint: SN = encode_resistor_reading(TARGET);
 
     // Derive the P gauge's scale from the min/max of the sensor range using
     // the controller equation: P = (setpoint - measurement) * kp.
-    let p_at_adc_min = (setpoint - encode_resistor_reading(0)) * KP;
-    let p_at_adc_max = (setpoint - encode_resistor_reading(ADC_MAX)) * KP;
+    let p_at_adc_min = (setpoint - encode_resistor_reading(0)) * GAINS.kp();
+    let p_at_adc_max = (setpoint - encode_resistor_reading(ADC_MAX)) * GAINS.kp();
     let p_gauge_limits = Limits::new(
-        p_at_adc_min.min(p_at_adc_max),
-        p_at_adc_min.max(p_at_adc_max),
+        p_at_adc_min.min(p_at_adc_max).0,
+        p_at_adc_min.max(p_at_adc_max).0,
     )
     .expect("ADC range must produce a non-zero P range");
 
@@ -109,15 +109,14 @@ pub async fn run(lights: &mut DancingLights<'static>) -> ! {
     // D = -kd * delta(measurement) / dt. Use the full ADC range and the
     // shortest expected interval to estimate the max value.
     let sensor_span = encode_resistor_reading(ADC_MAX) - encode_resistor_reading(0);
-    let d_max = (Saturating(KD) * Saturating(sensor_span) / Saturating(MIN_SAMPLE_PERIOD_SECS))
-        .0
+    let d_max = (GAINS.kd() * sensor_span / MIN_SAMPLE_PERIOD_SECS)
         .abs()
         .max(MIN_D_GAUGE_SPAN);
     let d_gauge_limits =
-        Limits::new(-d_max, d_max).expect("D gauge span must be greater than zero");
+        Limits::new(-d_max.0, d_max.0).expect("D gauge span must be greater than zero");
 
     // Construct the PID controller
-    let pid: PID = PID::new(setpoint, I_LIMITS, OUTPUT_LIMITS, GAINS);
+    let pid: PID = PID::new(setpoint.0, I_LIMITS, OUTPUT_LIMITS, GAINS);
 
     // Set up the guages
     let mut guage_p: ArrayGuage = ArrayGuage::new(p_gauge_limits, top_array);
@@ -191,7 +190,7 @@ async fn watch_photoresist<'a>(
     loop {
         let val = reciever.changed().await;
 
-        let (output, (p, i, d)) = pid.update_with_residues(encode_resistor_reading(val));
+        let (output, (p, i, d)) = pid.update_with_residues(encode_resistor_reading(val).0);
 
         // Scale 0.0..1.0 output to 0..u16::MAX
         let raw = output.to_bits().clamp(0, 1 << 24) as u32;
