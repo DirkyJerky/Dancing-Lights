@@ -41,8 +41,10 @@ fn encode_resistor_reading(val: u16) -> SN {
     let whole = val / SCALE;
     let remainder = val % SCALE;
 
-    Saturating(N::saturating_from_num(whole))
-        + Saturating(N::saturating_from_num(remainder)) / Saturating(N::saturating_from_num(SCALE))
+    Saturating(
+        N::saturating_from_num(whole)
+            + N::saturating_from_num(remainder) / N::saturating_from_num(SCALE),
+    )
 }
 
 pub async fn run(lights: &mut DancingLights<'static>) -> ! {
@@ -69,9 +71,9 @@ pub async fn run(lights: &mut DancingLights<'static>) -> ! {
     // Gain values that are calibrated
     // to respond efficiently without overshooting
     const CALIBRATED_GAINS: Gains = {
-        const KP: N = N::lit("0.0005");
-        const KI: N = N::lit("0.0");
-        const KD: N = N::lit("0.00");
+        const KP: N = N::lit("0.00075");
+        const KI: N = N::lit("0.25");
+        const KD: N = N::lit("0.0");
         Gains::new(KP, KI, KD)
     };
 
