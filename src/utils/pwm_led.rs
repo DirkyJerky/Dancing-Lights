@@ -11,7 +11,7 @@ pub struct PWMLed<'a, S: Slice> {
 }
 
 impl<'a, S: Slice> PWMLed<'a, S> {
-    pub fn new_b(slice: Peri<'a, S>, vcc: Peri<'a, impl ChannelBPin<S>>) -> Self {
+    fn config() -> Config {
         // PWM configuration is copied from
         // https://github.com/embassy-rs/embassy/blob/main/examples/rp/src/bin/pwm.rs
         let desired_freq_hz = 10_000;
@@ -23,26 +23,25 @@ impl<'a, S: Slice> PWMLed<'a, S> {
         config.top = period;
         config.divider = divider.into();
 
+        config
+    }
+
+    pub fn new_b(slice: Peri<'a, S>, vcc: Peri<'a, impl ChannelBPin<S>>) -> Self {
         Self {
-            pwm: Pwm::new_output_b(slice, vcc, config).split().1.unwrap(),
+            pwm: Pwm::new_output_b(slice, vcc, Self::config())
+                .split()
+                .1
+                .unwrap(),
             _marker: PhantomData,
         }
     }
 
     pub fn new_a(slice: Peri<'a, S>, vcc: Peri<'a, impl ChannelAPin<S>>) -> Self {
-        // PWM configuration is copied from
-        // https://github.com/embassy-rs/embassy/blob/main/examples/rp/src/bin/pwm.rs
-        let desired_freq_hz = 10_000;
-        let clock_freq_hz = embassy_rp::clocks::clk_sys_freq();
-        let divider = 16u8;
-        let period = (clock_freq_hz / (desired_freq_hz * divider as u32)) as u16 - 1;
-
-        let mut config = Config::default();
-        config.top = period;
-        config.divider = divider.into();
-
         Self {
-            pwm: Pwm::new_output_a(slice, vcc, config).split().0.unwrap(),
+            pwm: Pwm::new_output_a(slice, vcc, Self::config())
+                .split()
+                .0
+                .unwrap(),
             _marker: PhantomData,
         }
     }
@@ -52,18 +51,7 @@ impl<'a, S: Slice> PWMLed<'a, S> {
         vcc_a: Peri<'a, impl ChannelAPin<S>>,
         vcc_b: Peri<'a, impl ChannelBPin<S>>,
     ) -> (Self, Self) {
-        // PWM configuration is copied from
-        // https://github.com/embassy-rs/embassy/blob/main/examples/rp/src/bin/pwm.rs
-        let desired_freq_hz = 10_000;
-        let clock_freq_hz = embassy_rp::clocks::clk_sys_freq();
-        let divider = 16u8;
-        let period = (clock_freq_hz / (desired_freq_hz * divider as u32)) as u16 - 1;
-
-        let mut config = Config::default();
-        config.top = period;
-        config.divider = divider.into();
-
-        let pwm = Pwm::new_output_ab(slice, vcc_a, vcc_b, config);
+        let pwm = Pwm::new_output_ab(slice, vcc_a, vcc_b, Self::config());
         let (a, b) = pwm.split();
         (
             Self {
