@@ -5,17 +5,17 @@ pub enum Cyw43GpioPin {
     /// Onboard LED
     LED,
     /// RT6154 Power-Select
-    SMPS_Power_Select,
+    SMPSPowerSelect,
     /// VBUS Sense
-    VBUS_Sense,
+    VBUSSense,
 }
 
 impl Cyw43GpioPin {
     fn addr(&self) -> u8 {
         match self {
             Self::LED => 0,
-            Self::SMPS_Power_Select => 1,
-            Self::VBUS_Sense => 2,
+            Self::SMPSPowerSelect => 1,
+            Self::VBUSSense => 2,
         }
     }
 }
@@ -43,7 +43,7 @@ impl Cyw43Gpio {
 
     pub async fn reset(&mut self) {
         self.down(Cyw43GpioPin::LED).await;
-        self.down(Cyw43GpioPin::SMPS_Power_Select).await;
-        self.down(Cyw43GpioPin::VBUS_Sense).await;
+        self.down(Cyw43GpioPin::SMPSPowerSelect).await;
+        self.down(Cyw43GpioPin::VBUSSense).await;
     }
 }
