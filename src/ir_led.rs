@@ -1,16 +1,16 @@
-use embassy_rp::peripherals::PWM_SLICE6;
+use embassy_rp::peripherals::{PIN_12, PWM_SLICE6};
 
 use crate::utils::pwm_led::PWMLed;
 
 /// The IR Led, as configured via a PWM handler
 pub struct IRLed<'a> {
     /// The VCC pin
-    pwm_led: PWMLed<'a, PWM_SLICE6>,
+    pwm_led: PWMLed<'a, PWM_SLICE6, PIN_12>,
 }
 
 impl<'a> IRLed<'a> {
     /// Construct the IRLed using the PWM slice, and vcc + float pins
-    pub fn new(vcc: PWMLed<'static, PWM_SLICE6>) -> Self {
+    pub fn new(vcc: PWMLed<'static, PWM_SLICE6, PIN_12>) -> Self {
         Self { pwm_led: vcc }
     }
 

@@ -1,21 +1,21 @@
-use embassy_rp::peripherals::{PWM_SLICE6, PWM_SLICE7};
+use embassy_rp::peripherals::{PIN_13, PIN_14, PIN_15, PWM_SLICE6, PWM_SLICE7};
 
 use crate::utils::pwm_led::PWMLed;
 
 /// An RGB Led, with each R/G/B component configured via [`PWMLed`]
 /// for gamma-corrected brightness control
 pub struct RGBLed<'a> {
-    pwm_red: PWMLed<'a, PWM_SLICE6>,
-    pwm_blue: PWMLed<'a, PWM_SLICE7>,
-    pwm_green: PWMLed<'a, PWM_SLICE7>,
+    pwm_red: PWMLed<'a, PWM_SLICE6, PIN_13>,
+    pwm_blue: PWMLed<'a, PWM_SLICE7, PIN_14>,
+    pwm_green: PWMLed<'a, PWM_SLICE7, PIN_15>,
 }
 
 impl<'a> RGBLed<'a> {
     /// Construct a ne RGBLed given the provided peripherals and PWM control slices
     pub fn new(
-        red: PWMLed<'static, PWM_SLICE6>,
-        blue: PWMLed<'static, PWM_SLICE7>,
-        green: PWMLed<'static, PWM_SLICE7>,
+        red: PWMLed<'static, PWM_SLICE6, PIN_13>,
+        blue: PWMLed<'static, PWM_SLICE7, PIN_14>,
+        green: PWMLed<'static, PWM_SLICE7, PIN_15>,
     ) -> Self {
         Self {
             pwm_red: red,

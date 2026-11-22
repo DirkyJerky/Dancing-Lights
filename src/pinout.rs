@@ -65,81 +65,94 @@ use embassy_rp::{
     Peri,
     peripherals::{
         ADC, PIN_0, PIN_1, PIN_2, PIN_3, PIN_4, PIN_5, PIN_6, PIN_7, PIN_8, PIN_9, PIN_10, PIN_11,
-        PIN_12, PIN_13, PIN_14, PIN_15, PIN_17, PIN_18, PIN_19, PIN_20, PIN_21, PIN_22, PIN_26,
-        PIN_27, PIN_28, PWM_SLICE2, PWM_SLICE6, PWM_SLICE7,
+        PIN_12, PIN_13, PIN_14, PIN_15, PIN_17, PIN_18, PIN_20, PIN_22, PIN_26, PIN_27, PIN_28,
+        PWM_SLICE0, PWM_SLICE1, PWM_SLICE2, PWM_SLICE3, PWM_SLICE4, PWM_SLICE5, PWM_SLICE6,
+        PWM_SLICE7,
     },
 };
 
-pub struct LedArrayPinsBottom {
-    pub red: Peri<'static, PIN_0>,
-    pub yellow: Peri<'static, PIN_1>,
-    pub green: Peri<'static, PIN_2>,
-    pub blue: Peri<'static, PIN_3>,
-    pub bottom_row: Peri<'static, PIN_18>,
-    pub top_row: Peri<'static, PIN_28>,
+/// Right LED array: color channels on GPIO 0 through 3.
+pub type RightLEDArray<'a> =
+    LEDArray<'a, PWM_SLICE0, PIN_0, PWM_SLICE0, PIN_1, PWM_SLICE1, PIN_2, PWM_SLICE1, PIN_3>;
+
+/// Middle LED array: color channels on GPIO 4 through 7.
+pub type MiddleLEDArray<'a> =
+    LEDArray<'a, PWM_SLICE2, PIN_4, PWM_SLICE2, PIN_5, PWM_SLICE3, PIN_6, PWM_SLICE3, PIN_7>;
+
+/// Left LED array: color channels on GPIO 8 through 11.
+pub type LeftLEDArray<'a> =
+    LEDArray<'a, PWM_SLICE4, PIN_8, PWM_SLICE4, PIN_9, PWM_SLICE5, PIN_10, PWM_SLICE5, PIN_11>;
+
+pub struct LedArrayPinsRight {
+    pub red: PWMLed<'static, PWM_SLICE0, PIN_0>,
+    pub yellow: PWMLed<'static, PWM_SLICE0, PIN_1>,
+    pub green: PWMLed<'static, PWM_SLICE1, PIN_2>,
+    pub blue: PWMLed<'static, PWM_SLICE1, PIN_3>,
+    pub right_row: Peri<'static, PIN_18>,
+    pub left_row: Peri<'static, PIN_28>,
 }
 
-impl<'a> Into<LEDArray<'a>> for LedArrayPinsBottom {
-    fn into(self) -> LEDArray<'a> {
+impl<'a> Into<RightLEDArray<'a>> for LedArrayPinsRight {
+    fn into(self) -> RightLEDArray<'a> {
         LEDArray::new(
             self.red,
             self.yellow,
             self.green,
             self.blue,
-            self.bottom_row,
-            self.top_row,
+            self.right_row,
+            self.left_row,
         )
     }
 }
 
 pub struct LedArrayPinsMiddle {
-    pub red: Peri<'static, PIN_4>,
-    pub yellow: Peri<'static, PIN_5>,
-    pub green: Peri<'static, PIN_6>,
-    pub blue: Peri<'static, PIN_7>,
-    pub bottom_row: Peri<'static, PIN_27>,
-    pub top_row: Peri<'static, PIN_22>,
+    pub red: PWMLed<'static, PWM_SLICE2, PIN_4>,
+    pub yellow: PWMLed<'static, PWM_SLICE2, PIN_5>,
+    pub green: PWMLed<'static, PWM_SLICE3, PIN_6>,
+    pub blue: PWMLed<'static, PWM_SLICE3, PIN_7>,
+    pub right_row: Peri<'static, PIN_27>,
+    pub left_row: Peri<'static, PIN_22>,
 }
 
-impl<'a> Into<LEDArray<'a>> for LedArrayPinsMiddle {
-    fn into(self) -> LEDArray<'a> {
+impl<'a> Into<MiddleLEDArray<'a>> for LedArrayPinsMiddle {
+    fn into(self) -> MiddleLEDArray<'a> {
         LEDArray::new(
             self.red,
             self.yellow,
             self.green,
             self.blue,
-            self.bottom_row,
-            self.top_row,
+            self.right_row,
+            self.left_row,
         )
     }
 }
 
-pub struct LedArrayPinsTop {
-    pub red: Peri<'static, PIN_8>,
-    pub yellow: Peri<'static, PIN_9>,
-    pub green: Peri<'static, PIN_10>,
-    pub blue: Peri<'static, PIN_11>,
-    pub bottom_row: Peri<'static, PIN_20>,
-    pub top_row: Peri<'static, PIN_17>,
+pub struct LedArrayPinsLeft {
+    pub red: PWMLed<'static, PWM_SLICE4, PIN_8>,
+    pub yellow: PWMLed<'static, PWM_SLICE4, PIN_9>,
+    pub green: PWMLed<'static, PWM_SLICE5, PIN_10>,
+    pub blue: PWMLed<'static, PWM_SLICE5, PIN_11>,
+    pub right_row: Peri<'static, PIN_20>,
+    pub left_row: Peri<'static, PIN_17>,
 }
 
-impl<'a> Into<LEDArray<'a>> for LedArrayPinsTop {
-    fn into(self) -> LEDArray<'a> {
+impl<'a> Into<LeftLEDArray<'a>> for LedArrayPinsLeft {
+    fn into(self) -> LeftLEDArray<'a> {
         LEDArray::new(
             self.red,
             self.yellow,
             self.green,
             self.blue,
-            self.bottom_row,
-            self.top_row,
+            self.right_row,
+            self.left_row,
         )
     }
 }
 
 pub struct RGBLedPins {
-    pub red: PWMLed<'static, PWM_SLICE6>,
-    pub blue: PWMLed<'static, PWM_SLICE7>,
-    pub green: PWMLed<'static, PWM_SLICE7>,
+    pub red: PWMLed<'static, PWM_SLICE6, PIN_13>,
+    pub blue: PWMLed<'static, PWM_SLICE7, PIN_14>,
+    pub green: PWMLed<'static, PWM_SLICE7, PIN_15>,
 }
 
 impl<'a> Into<RGBLed<'a>> for RGBLedPins {
@@ -148,11 +161,11 @@ impl<'a> Into<RGBLed<'a>> for RGBLedPins {
     }
 }
 
-pub struct IRLedPin {
-    pub vcc: PWMLed<'static, PWM_SLICE6>,
+pub struct IRLedPins {
+    pub vcc: PWMLed<'static, PWM_SLICE6, PIN_12>,
 }
 
-impl<'a> Into<IRLed<'a>> for IRLedPin {
+impl<'a> Into<IRLed<'a>> for IRLedPins {
     fn into(self) -> IRLed<'a> {
         IRLed::new(self.vcc)
     }
@@ -172,9 +185,9 @@ impl<'a> Into<Photoresistor<'a>> for PhotoresistorPins {
 
 pub struct DancingLights<'a> {
     pub cyw43_control: Cyw43Gpio,
-    pub bottom_array: LEDArray<'a>,
-    pub middle_array: LEDArray<'a>,
-    pub top_array: LEDArray<'a>,
+    pub right_array: RightLEDArray<'a>,
+    pub middle_array: MiddleLEDArray<'a>,
+    pub left_array: LeftLEDArray<'a>,
     pub rgb_led: RGBLed<'a>,
     pub ir_led: IRLed<'a>,
     pub photoresistor: Photoresistor<'a>,
@@ -184,9 +197,9 @@ pub struct DancingLights<'a> {
 impl<'a> DancingLights<'a> {
     pub fn new(
         cyw43_control: Control<'static>,
-        bottom_array: LedArrayPinsBottom,
+        right_array: LedArrayPinsRight,
         middle_array: LedArrayPinsMiddle,
-        top_array: LedArrayPinsTop,
+        left_array: LedArrayPinsLeft,
         rgb_led: RGBLedPins,
         ir_led: IRLedPins,
         photoresistor: PhotoresistorPins,
@@ -194,9 +207,9 @@ impl<'a> DancingLights<'a> {
     ) -> DancingLights<'a> {
         DancingLights {
             cyw43_control: Cyw43Gpio::new(cyw43_control),
-            bottom_array: bottom_array.into(),
+            right_array: right_array.into(),
             middle_array: middle_array.into(),
-            top_array: top_array.into(),
+            left_array: left_array.into(),
             rgb_led: rgb_led.into(),
             ir_led: ir_led.into(),
             photoresistor: photoresistor.into(),
@@ -206,9 +219,9 @@ impl<'a> DancingLights<'a> {
 
     pub async fn reset(&mut self) {
         self.cyw43_control.reset().await;
-        self.bottom_array.reset();
+        self.right_array.reset();
         self.middle_array.reset();
-        self.top_array.reset();
+        self.left_array.reset();
         self.rgb_led.reset();
         self.ir_led.reset();
     }

@@ -2,15 +2,17 @@ use core::marker::PhantomData;
 
 use embassy_rp::{
     Peri,
+    gpio::Pin,
     pwm::{ChannelAPin, ChannelBPin, Config, Pwm, PwmOutput, SetDutyCycle, Slice},
 };
 
-pub struct PWMLed<'a, S: Slice> {
+pub struct PWMLed<'a, S: Slice, P: Pin> {
     pwm: PwmOutput<'a>,
-    _marker: PhantomData<S>,
+    _marker_slice: PhantomData<S>,
+    _marker_pin: PhantomData<P>,
 }
 
-impl<'a, S: Slice> PWMLed<'a, S> {
+impl<'a, S: Slice, P: Pin> PWMLed<'a, S, P> {
     fn config() -> Config {
         // PWM configuration is copied from
         // https://github.com/embassy-rs/embassy/blob/main/examples/rp/src/bin/pwm.rs
@@ -26,41 +28,55 @@ impl<'a, S: Slice> PWMLed<'a, S> {
         config
     }
 
-    pub fn new_b(slice: Peri<'a, S>, vcc: Peri<'a, impl ChannelBPin<S>>) -> Self {
+    pub fn new_b(slice: Peri<'a, S>, vcc: Peri<'a, P>) -> Self
+    where
+        P: ChannelBPin<S>,
+    {
         Self {
             pwm: Pwm::new_output_b(slice, vcc, Self::config())
                 .split()
                 .1
                 .unwrap(),
-            _marker: PhantomData,
+            _marker_slice: PhantomData,
+            _marker_pin: PhantomData,
         }
     }
 
-    pub fn new_a(slice: Peri<'a, S>, vcc: Peri<'a, impl ChannelAPin<S>>) -> Self {
+    pub fn new_a(slice: Peri<'a, S>, vcc: Peri<'a, P>) -> Self
+    where
+        P: ChannelAPin<S>,
+    {
         Self {
             pwm: Pwm::new_output_a(slice, vcc, Self::config())
                 .split()
                 .0
                 .unwrap(),
-            _marker: PhantomData,
+            _marker_slice: PhantomData,
+            _marker_pin: PhantomData,
         }
     }
 
-    pub fn new_ab(
+    pub fn new_ab<PB>(
         slice: Peri<'a, S>,
-        vcc_a: Peri<'a, impl ChannelAPin<S>>,
-        vcc_b: Peri<'a, impl ChannelBPin<S>>,
-    ) -> (Self, Self) {
+        vcc_a: Peri<'a, P>,
+        vcc_b: Peri<'a, PB>,
+    ) -> (Self, PWMLed<'a, S, PB>)
+    where
+        P: ChannelAPin<S>,
+        PB: Pin + ChannelBPin<S>,
+    {
         let pwm = Pwm::new_output_ab(slice, vcc_a, vcc_b, Self::config());
         let (a, b) = pwm.split();
         (
             Self {
                 pwm: a.unwrap(),
-                _marker: PhantomData,
+                _marker_slice: PhantomData,
+                _marker_pin: PhantomData,
             },
-            Self {
+            PWMLed {
                 pwm: b.unwrap(),
-                _marker: PhantomData,
+                _marker_slice: PhantomData,
+                _marker_pin: PhantomData,
             },
         )
     }

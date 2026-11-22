@@ -10,9 +10,9 @@ use embassy_time::{Duration, Timer};
 use crate::{
     cyw43_gpio::{Cyw43Gpio, Cyw43GpioPin},
     ir_led::IRLed,
-    led_array::{ArrayPin, LEDArray, PinState},
+    led_array::{ColorPin, GroundPin},
     photoresistor::Photoresistor,
-    pinout::DancingLights,
+    pinout::{DancingLights, LeftLEDArray, MiddleLEDArray, RightLEDArray},
     rgb_led::RGBLed,
     utils::trig,
 };
@@ -21,12 +21,12 @@ pub async fn run(lights: &mut DancingLights<'static>) -> ! {
     let DancingLights {
         cyw43_control,
         photoresistor,
-        bottom_array,
+        right_array,
         middle_array,
-        top_array,
+        left_array,
         rgb_led,
         ir_led,
-        bootsel_button,
+        bootsel_button: _,
     } = lights;
 
     let (_never, ..) = join4(
@@ -34,7 +34,7 @@ pub async fn run(lights: &mut DancingLights<'static>) -> ! {
         read_photoresistor(photoresistor),
         strobe_rgb(rgb_led),
         join(
-            flash_arrays(bottom_array, middle_array, top_array),
+            flash_arrays(right_array, middle_array, left_array),
             fade_ir(ir_led),
         ),
     )
@@ -113,47 +113,46 @@ async fn strobe_rgb(rgb: &mut RGBLed<'static>) -> ! {
 
 /// Randomize the array states every second
 async fn flash_arrays(
-    bottom: &mut LEDArray<'static>,
-    middle: &mut LEDArray<'static>,
-    top: &mut LEDArray<'static>,
+    right: &mut RightLEDArray<'static>,
+    middle: &mut MiddleLEDArray<'static>,
+    left: &mut LeftLEDArray<'static>,
 ) -> ! {
     let mut rng = RoscRng;
 
-    loop {
-        let rand = rng.next_u32();
+    macro_rules! flash_array {
+        ($array:expr, $byte:expr) => {{
+            let array = &mut *$array;
+            let byte = $byte;
+            let row_nibble = byte & 0x0F;
+            let red_yellow = rng.next_u32();
+            let green_blue = rng.next_u32();
 
-        for (array, master_offset) in [(&mut *bottom, 0), (&mut *middle, 8), (&mut *top, 16)] {
-            let byte: u8 = ((rand >> master_offset) & 0xFF) as u8;
-            let color_nibble: u8 = (byte >> 4) & 0x0F;
-            let row_nibble: u8 = byte & 0x0F;
-
-            for (pin, bit_offset) in [
-                (ArrayPin::Red, 0),
-                (ArrayPin::Yellow, 1),
-                (ArrayPin::Green, 2),
-                (ArrayPin::Blue, 3),
+            for (color, brightness) in [
+                (ColorPin::Red, red_yellow as u16),
+                (ColorPin::Yellow, (red_yellow >> 16) as u16),
+                (ColorPin::Green, green_blue as u16),
+                (ColorPin::Blue, (green_blue >> 16) as u16),
             ] {
-                array.set_pin(
-                    pin,
-                    if color_nibble & 1u8 << bit_offset != 0 {
-                        PinState::High
-                    } else {
-                        PinState::HighImpedance
-                    },
-                );
+                array.set_color_brightness(color, brightness);
             }
 
-            let (top_state, bottom_state) = match row_nibble {
-                0..6 => (PinState::HighImpedance, PinState::Low),
-                6..10 => (PinState::Low, PinState::HighImpedance),
-                10..=16 => (PinState::Low, PinState::Low),
+            let (left_enabled, right_enabled) = match row_nibble {
+                0..6 => (false, true),
+                6..10 => (true, false),
+                10..=15 => (true, true),
                 _ => unreachable!(),
             };
+            array.set_ground(GroundPin::Left, left_enabled);
+            array.set_ground(GroundPin::Right, right_enabled);
+        }};
+    }
 
-            array.set_pin(ArrayPin::Top, top_state);
-            array.set_pin(ArrayPin::Bottom, bottom_state);
-        }
+    loop {
+        let rand = rng.next_u32();
+        flash_array!(right, rand as u8);
+        flash_array!(middle, (rand >> 8) as u8);
+        flash_array!(left, (rand >> 16) as u8);
 
-        Timer::after(Duration::from_millis(1000)).await;
+        Timer::after(Duration::from_millis(250)).await;
     }
 }

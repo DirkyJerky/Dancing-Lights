@@ -20,9 +20,9 @@ use fixed::Saturating;
 
 use crate::{
     ir_led::IRLed,
-    led_array::{ArrayPin, LEDArray, PinState},
     photoresistor::Photoresistor,
     pinout::DancingLights,
+    utils::array_guage::ArrayGuage,
     utils::int_pid::{Gains, Limits, N, PID, SN},
 };
 
@@ -51,9 +51,9 @@ pub async fn run(lights: &mut DancingLights<'static>) -> ! {
     let DancingLights {
         cyw43_control,
         photoresistor,
-        bottom_array,
+        right_array,
         middle_array,
-        top_array,
+        left_array,
         rgb_led,
         ir_led,
         bootsel_button,
@@ -121,9 +121,9 @@ pub async fn run(lights: &mut DancingLights<'static>) -> ! {
     let pid: PID = PID::new(setpoint.0, I_LIMITS, OUTPUT_LIMITS, GAINS);
 
     // Set up the guages
-    let mut guage_p: ArrayGuage = ArrayGuage::new(p_gauge_limits, top_array);
-    let mut guage_i: ArrayGuage = ArrayGuage::new(I_GAUGE_LIMITS, middle_array);
-    let mut guage_d: ArrayGuage = ArrayGuage::new(d_gauge_limits, bottom_array);
+    let mut guage_p = ArrayGuage::new(p_gauge_limits, left_array);
+    let mut guage_i = ArrayGuage::new(I_GAUGE_LIMITS, middle_array);
+    let mut guage_d = ArrayGuage::new(d_gauge_limits, right_array);
 
     // Run the feedback loop
     join(
@@ -136,43 +136,6 @@ pub async fn run(lights: &mut DancingLights<'static>) -> ! {
     unreachable!()
 }
 
-/// Converts an LED array into a display guage, showing a values range within an expected Limit range
-struct ArrayGuage<'b, 'peri> {
-    limits: Limits,
-    array: &'b mut LEDArray<'peri>,
-}
-
-impl<'b, 'peri> ArrayGuage<'b, 'peri> {
-    pub fn new(limits: Limits, array: &'b mut LEDArray<'peri>) -> Self {
-        array.set_pin(ArrayPin::Bottom, PinState::Low);
-        array.set_pin(ArrayPin::Top, PinState::Low);
-        Self { limits, array }
-    }
-
-    /// Set the guage level according to the provided value
-    pub fn set(&mut self, val: N) {
-        let low = self.limits.low();
-        let high = self.limits.high();
-        let diff = high - low;
-        let step = diff / 5;
-
-        let thresholds = [
-            (ArrayPin::Red, low + step),
-            (ArrayPin::Yellow, low + 2 * step),
-            (ArrayPin::Green, low + 3 * step),
-            (ArrayPin::Blue, low + 4 * step),
-        ];
-
-        for (pin, threshold) in thresholds {
-            if val > threshold {
-                self.array.set_pin(pin, PinState::High);
-            } else {
-                self.array.set_pin(pin, PinState::HighImpedance);
-            }
-        }
-    }
-}
-
 /// Watch the photoresistor values,
 /// updating the PID controller and setting the IR LED brightness according
 /// to the controller's response
@@ -181,9 +144,42 @@ impl<'b, 'peri> ArrayGuage<'b, 'peri> {
 async fn watch_photoresist<'a>(
     mut pid: PID,
     ir_led: &mut IRLed<'a>,
-    guage_p: &mut ArrayGuage<'_, 'a>,
-    guage_i: &mut ArrayGuage<'_, 'a>,
-    guage_d: &mut ArrayGuage<'_, 'a>,
+    guage_p: &mut ArrayGuage<
+        '_,
+        'a,
+        impl embassy_rp::pwm::Slice,
+        impl embassy_rp::gpio::Pin,
+        impl embassy_rp::pwm::Slice,
+        impl embassy_rp::gpio::Pin,
+        impl embassy_rp::pwm::Slice,
+        impl embassy_rp::gpio::Pin,
+        impl embassy_rp::pwm::Slice,
+        impl embassy_rp::gpio::Pin,
+    >,
+    guage_i: &mut ArrayGuage<
+        '_,
+        'a,
+        impl embassy_rp::pwm::Slice,
+        impl embassy_rp::gpio::Pin,
+        impl embassy_rp::pwm::Slice,
+        impl embassy_rp::gpio::Pin,
+        impl embassy_rp::pwm::Slice,
+        impl embassy_rp::gpio::Pin,
+        impl embassy_rp::pwm::Slice,
+        impl embassy_rp::gpio::Pin,
+    >,
+    guage_d: &mut ArrayGuage<
+        '_,
+        'a,
+        impl embassy_rp::pwm::Slice,
+        impl embassy_rp::gpio::Pin,
+        impl embassy_rp::pwm::Slice,
+        impl embassy_rp::gpio::Pin,
+        impl embassy_rp::pwm::Slice,
+        impl embassy_rp::gpio::Pin,
+        impl embassy_rp::pwm::Slice,
+        impl embassy_rp::gpio::Pin,
+    >,
 ) {
     // This reciever slot will be recovered when this future goes out of scope.
     // So, we dont need to worry about exceeding the reciever count

@@ -27,11 +27,12 @@ use static_cell::StaticCell;
 
 use crate::bootsel::{BootselButton, BootselPoller};
 use crate::pinout::{
-    DancingLights, IRLedPins, LedArrayPinsBottom, LedArrayPinsMiddle, LedArrayPinsTop,
+    DancingLights, IRLedPins, LedArrayPinsLeft, LedArrayPinsMiddle, LedArrayPinsRight,
     PhotoresistorPins, RGBLedPins,
 };
+use crate::utils::pwm_led::PWMLed;
 
-/// Setup the ADC, PIO, and DMA interrupts for further operations
+// Setup the ADC, PIO, and DMA interrupts for further operations
 bind_interrupts!(struct Irqs {
     ADC_IRQ_FIFO => embassy_rp::adc::InterruptHandler;
     PIO0_IRQ_0 => InterruptHandler<PIO0>;
@@ -101,47 +102,67 @@ async fn main(spawner: Spawner) {
         .await;
     defmt::debug!("control.init took {} ms", start.elapsed().as_millis());
 
-    let led_array_bottom = LedArrayPinsBottom {
-        red: peripherals.PIN_0,
-        yellow: peripherals.PIN_1,
-        green: peripherals.PIN_2,
-        blue: peripherals.PIN_3,
-        bottom_row: peripherals.PIN_18,
-        top_row: peripherals.PIN_28,
+    // Setup the PWM outputs
+    let (pin0_pwm, pin1_pwm) =
+        PWMLed::new_ab(peripherals.PWM_SLICE0, peripherals.PIN_0, peripherals.PIN_1);
+    let (pin2_pwm, pin3_pwm) =
+        PWMLed::new_ab(peripherals.PWM_SLICE1, peripherals.PIN_2, peripherals.PIN_3);
+    let (pin4_pwm, pin5_pwm) =
+        PWMLed::new_ab(peripherals.PWM_SLICE2, peripherals.PIN_4, peripherals.PIN_5);
+    let (pin6_pwm, pin7_pwm) =
+        PWMLed::new_ab(peripherals.PWM_SLICE3, peripherals.PIN_6, peripherals.PIN_7);
+    let (pin8_pwm, pin9_pwm) =
+        PWMLed::new_ab(peripherals.PWM_SLICE4, peripherals.PIN_8, peripherals.PIN_9);
+    let (pin10_pwm, pin11_pwm) = PWMLed::new_ab(
+        peripherals.PWM_SLICE5,
+        peripherals.PIN_10,
+        peripherals.PIN_11,
+    );
+    let (pin12_pwm, pin13_pwm) = PWMLed::new_ab(
+        peripherals.PWM_SLICE6,
+        peripherals.PIN_12,
+        peripherals.PIN_13,
+    );
+    let (pin14_pwm, pin15_pwm) = PWMLed::new_ab(
+        peripherals.PWM_SLICE7,
+        peripherals.PIN_14,
+        peripherals.PIN_15,
+    );
+
+    let led_array_bottom = LedArrayPinsRight {
+        red: pin0_pwm,
+        yellow: pin1_pwm,
+        green: pin2_pwm,
+        blue: pin3_pwm,
+        right_row: peripherals.PIN_18,
+        left_row: peripherals.PIN_28,
     };
 
     let led_array_middle = LedArrayPinsMiddle {
-        red: peripherals.PIN_4,
-        yellow: peripherals.PIN_5,
-        green: peripherals.PIN_6,
-        blue: peripherals.PIN_7,
-        bottom_row: peripherals.PIN_27,
-        top_row: peripherals.PIN_22,
+        red: pin4_pwm,
+        yellow: pin5_pwm,
+        green: pin6_pwm,
+        blue: pin7_pwm,
+        right_row: peripherals.PIN_27,
+        left_row: peripherals.PIN_22,
     };
 
-    let led_array_top = LedArrayPinsTop {
-        red: peripherals.PIN_8,
-        yellow: peripherals.PIN_9,
-        green: peripherals.PIN_10,
-        blue: peripherals.PIN_11,
-        bottom_row: peripherals.PIN_20,
-        top_row: peripherals.PIN_17,
+    let led_array_top = LedArrayPinsLeft {
+        red: pin8_pwm,
+        yellow: pin9_pwm,
+        green: pin10_pwm,
+        blue: pin11_pwm,
+        right_row: peripherals.PIN_20,
+        left_row: peripherals.PIN_17,
     };
 
     let rgb_led = RGBLedPins {
-        red: peripherals.PIN_12,
-        float: peripherals.PIN_13,
-        blue: peripherals.PIN_14,
-        green: peripherals.PIN_15,
-        r_slice: peripherals.PWM_SLICE6,
-        gb_slice: peripherals.PWM_SLICE7,
+        red: pin13_pwm,
+        blue: pin14_pwm,
+        green: pin15_pwm,
     };
 
-    let ir_led = IRLedPins {
-        slice2: peripherals.PWM_SLICE2,
-        vcc: peripherals.PIN_21,
-        float: peripherals.PIN_19,
-    };
+    let ir_led = IRLedPins { vcc: pin12_pwm };
 
     let photoresist = PhotoresistorPins {
         adc: peripherals.ADC,
