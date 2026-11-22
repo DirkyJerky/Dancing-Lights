@@ -24,11 +24,18 @@ impl<'a> RGBLed<'a> {
         }
     }
 
-    /// The brightness of each color to the provided values
+    /// Set the brightness of each color to the provided values
     pub fn set(&mut self, r: u16, g: u16, b: u16) {
         self.pwm_red.set_brightness(r);
         self.pwm_green.set_brightness(g);
         self.pwm_blue.set_brightness(b);
+    }
+
+    /// Set the duty cycle of each color to the provided values
+    pub fn set_duty_cycle(&mut self, r: u16, g: u16, b: u16) {
+        self.pwm_red.set_duty_cycle(r);
+        self.pwm_green.set_duty_cycle(g);
+        self.pwm_blue.set_duty_cycle(b);
     }
 
     /// Set all color components to the maximum value
@@ -52,7 +59,7 @@ impl<'a> RGBLed<'a> {
 
         let twice_lightness = 2 * l as u32;
         let lightness_distance = twice_lightness.abs_diff(MAX);
-        let chroma = (lightness_distance * s as u32) / MAX;
+        let chroma = ((MAX - lightness_distance) * s as u32) / MAX;
         let x = if sector % 2 == 0 {
             chroma * hue_fraction / MAX
         } else {
@@ -69,7 +76,7 @@ impl<'a> RGBLed<'a> {
             _ => (chroma, 0, x),
         };
 
-        self.set(
+        self.set_duty_cycle(
             (r + match_value) as u16,
             (g + match_value) as u16,
             (b + match_value) as u16,

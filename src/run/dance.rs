@@ -62,7 +62,7 @@ async fn read_photoresistor(photoresistor: &mut Photoresistor<'static>) -> ! {
             Ok(val) => defmt::info!("Photoresistor value: {}", val),
         }
 
-        Timer::after(Duration::from_millis(1000)).await;
+        Timer::after(Duration::from_millis(5000)).await;
     }
 }
 
@@ -96,18 +96,15 @@ async fn fade_ir(ir: &mut IRLed<'static>) {
     }
 }
 
-/// Randomize the RGB Led every half second
+/// Cycle smoothly through the rainbow in approximately five seconds.
 async fn strobe_rgb(rgb: &mut RGBLed<'static>) -> ! {
-    let mut rng = RoscRng;
+    let mut hue = 0u16;
 
     loop {
-        rgb.set(
-            rng.next_u32() as u16,
-            rng.next_u32() as u16,
-            rng.next_u32() as u16,
-        );
+        rgb.set_hsl(hue, u16::MAX, u16::MAX / 2);
+        hue = hue.wrapping_add(256);
 
-        Timer::after(Duration::from_millis(500)).await;
+        Timer::after(Duration::from_millis(10)).await;
     }
 }
 
