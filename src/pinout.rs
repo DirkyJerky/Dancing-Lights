@@ -55,7 +55,7 @@
 
 use crate::{
     bootsel::BootselButton, cyw43_gpio::Cyw43Gpio, ir_led::IRLed, photoresistor::Photoresistor,
-    rgb_led::RGBLed,
+    rgb_led::RGBLed, utils::pwm_led::PWMLed,
 };
 
 use super::led_array::LEDArray;
@@ -137,36 +137,24 @@ impl<'a> Into<LEDArray<'a>> for LedArrayPinsTop {
 }
 
 pub struct RGBLedPins {
-    pub red: Peri<'static, PIN_12>,
-    pub float: Peri<'static, PIN_13>,
-    pub blue: Peri<'static, PIN_14>,
-    pub green: Peri<'static, PIN_15>,
-    pub r_slice: Peri<'static, PWM_SLICE6>,
-    pub gb_slice: Peri<'static, PWM_SLICE7>,
+    pub red: PWMLed<'static, PWM_SLICE6>,
+    pub blue: PWMLed<'static, PWM_SLICE7>,
+    pub green: PWMLed<'static, PWM_SLICE7>,
 }
 
 impl<'a> Into<RGBLed<'a>> for RGBLedPins {
     fn into(self) -> RGBLed<'a> {
-        RGBLed::new(
-            self.red,
-            self.float,
-            self.blue,
-            self.green,
-            self.r_slice,
-            self.gb_slice,
-        )
+        RGBLed::new(self.red, self.blue, self.green)
     }
 }
 
-pub struct IRLedPins {
-    pub slice2: Peri<'static, PWM_SLICE2>,
-    pub vcc: Peri<'static, PIN_21>,
-    pub float: Peri<'static, PIN_19>,
+pub struct IRLedPin {
+    pub vcc: PWMLed<'static, PWM_SLICE6>,
 }
 
-impl<'a> Into<IRLed<'a>> for IRLedPins {
+impl<'a> Into<IRLed<'a>> for IRLedPin {
     fn into(self) -> IRLed<'a> {
-        IRLed::new(self.slice2, self.vcc, self.float)
+        IRLed::new(self.vcc)
     }
 }
 

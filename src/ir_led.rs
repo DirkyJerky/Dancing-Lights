@@ -1,31 +1,17 @@
-use embassy_rp::{
-    Peri,
-    gpio::{Input, Pin, Pull},
-    peripherals::PWM_SLICE2,
-    pwm::ChannelBPin,
-};
+use embassy_rp::peripherals::PWM_SLICE6;
 
 use crate::utils::pwm_led::PWMLed;
 
 /// The IR Led, as configured via a PWM handler
 pub struct IRLed<'a> {
     /// The VCC pin
-    pwm_led: PWMLed<'a, PWM_SLICE2>,
-    /// A high impedence pin, attached to the LED cathode and to GND through a resistor.
-    _float: Input<'a>,
+    pwm_led: PWMLed<'a, PWM_SLICE6>,
 }
 
 impl<'a> IRLed<'a> {
     /// Construct the IRLed using the PWM slice, and vcc + float pins
-    pub fn new(
-        slice: Peri<'a, PWM_SLICE2>,
-        vcc: Peri<'a, impl ChannelBPin<PWM_SLICE2>>,
-        float: Peri<'a, impl Pin>,
-    ) -> Self {
-        Self {
-            pwm_led: PWMLed::new_b(slice, vcc),
-            _float: Input::new(float, Pull::None),
-        }
+    pub fn new(vcc: PWMLed<'static, PWM_SLICE6>) -> Self {
+        Self { pwm_led: vcc }
     }
 
     /// Set the LED to maximum brightness

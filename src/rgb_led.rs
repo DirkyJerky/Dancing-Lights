@@ -1,8 +1,4 @@
-use embassy_rp::{
-    Peri,
-    gpio::{Input, Pin, Pull},
-    peripherals::{PIN_12, PIN_14, PIN_15, PWM_SLICE6, PWM_SLICE7},
-};
+use embassy_rp::peripherals::{PWM_SLICE6, PWM_SLICE7};
 
 use crate::utils::pwm_led::PWMLed;
 
@@ -10,7 +6,6 @@ use crate::utils::pwm_led::PWMLed;
 /// for gamma-corrected brightness control
 pub struct RGBLed<'a> {
     pwm_red: PWMLed<'a, PWM_SLICE6>,
-    _float: Input<'a>,
     pwm_blue: PWMLed<'a, PWM_SLICE7>,
     pwm_green: PWMLed<'a, PWM_SLICE7>,
 }
@@ -18,19 +13,14 @@ pub struct RGBLed<'a> {
 impl<'a> RGBLed<'a> {
     /// Construct a ne RGBLed given the provided peripherals and PWM control slices
     pub fn new(
-        red: Peri<'a, PIN_12>,
-        float: Peri<'a, impl Pin>,
-        blue: Peri<'a, PIN_14>,
-        green: Peri<'a, PIN_15>,
-        slice_red: Peri<'a, PWM_SLICE6>,
-        slice_green_blue: Peri<'a, PWM_SLICE7>,
+        red: PWMLed<'static, PWM_SLICE6>,
+        blue: PWMLed<'static, PWM_SLICE7>,
+        green: PWMLed<'static, PWM_SLICE7>,
     ) -> Self {
-        let (pwm_blue, pwm_green) = PWMLed::new_ab(slice_green_blue, blue, green);
         Self {
-            pwm_red: PWMLed::new_a(slice_red, red),
-            _float: Input::new(float, Pull::None),
-            pwm_blue,
-            pwm_green,
+            pwm_red: red,
+            pwm_blue: blue,
+            pwm_green: green,
         }
     }
 
