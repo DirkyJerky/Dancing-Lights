@@ -4,7 +4,7 @@ A Pi Pico, some LEDs, and a dream!
 
 This firmware configures a Raspberry Pi Pico W to control colored LEDs and other peripherals, using different behavior modes that are selected at runtime.  This firmware is created with [Embassy](https://embassy.dev/), and flashed using probe-rs with a SWD probe.
 
-## Setup
+# Setup
 
 <img src="photos/pinout.jpg" alt="Breadboard setup with a Raspberry Pi Pico W, colored LED arrays, and a photoresistor" width="700">
 
@@ -14,11 +14,11 @@ Each pair of same-colored LEDs shares a PWM-controlled pin along one side of the
 
 The colored LED groups display lighting effects, including randomized effects and PID feedback guages. The separate LED can be moved closer to or farther from the photoresistor to experiment with automatic brightness control.
 
-## Runtime modes
+# Runtime modes
 
 Press and release the Pico's **BOOTSEL** button to advance through **Dance → On → Off → Feedback**, then wrap back to Dance. The LEDs reset before each new mode begins.
 
-### Dance
+## Dance
 
 <img src="photos/dance.jpg" alt="LED lighting effects in Dance mode" width="700">
 
@@ -30,11 +30,11 @@ Runs several effects concurrently:
 - **Onboard LED:** Flashes briefly once per second.
 - **Photoresistor:** Logs the light reading every five seconds.
 
-### On / Off
+## On / Off
 
 Turns all LEDs on at full brightness or turns them all off.
 
-### Feedback
+## Feedback
 
 | Low light | Normal light | Bright light |
 |:---:|:---:|:---:|
