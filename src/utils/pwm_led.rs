@@ -1,3 +1,7 @@
+//! Controls LED brightness through typed PWM outputs.
+//! Supports individual or paired channels, direct duty-cycle control, and
+//! gamma-corrected brightness using 16-bit input values.
+
 use core::marker::PhantomData;
 
 use embassy_rp::{

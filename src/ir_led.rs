@@ -1,3 +1,5 @@
+//! Provides on/off and variable brightness control for the standalone LED.
+
 use embassy_rp::peripherals::{PIN_12, PWM_SLICE6};
 
 use crate::utils::pwm_led::PWMLed;

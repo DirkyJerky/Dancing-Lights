@@ -1,3 +1,5 @@
+//! Provides color brightness control and column selection for a 2×4 LED array.
+
 use embassy_rp::{
     Peri,
     gpio::{Flex, Pin, Pull},

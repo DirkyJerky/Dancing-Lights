@@ -1,3 +1,5 @@
+//! Provides access to BOOTSEL button press and release events.
+
 use embassy_rp::{
     Peri, bootsel::is_bootsel_pressed, peripherals::BOOTSEL, spinlock_mutex::SpinlockRawMutex,
 };
@@ -69,7 +71,10 @@ impl<'a> BootselPoller<'a> {
 
 impl BootselButton {
     /// Construct a new button and poller instance
-    pub fn new(button: Peri<'static, BOOTSEL>, poll_frequency: Duration) -> (Self, BootselPoller) {
+    pub fn new(
+        button: Peri<'static, BOOTSEL>,
+        poll_frequency: Duration,
+    ) -> (Self, BootselPoller<'static>) {
         let poller: BootselPoller<'static> =
             BootselPoller::new(button, WATCH.sender(), poll_frequency);
 

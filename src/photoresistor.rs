@@ -1,3 +1,5 @@
+//! Provides light-level readings from the photoresistor.
+
 use embassy_rp::{
     Peri,
     adc::{self, Adc, AdcPin, Async, Channel, Config, Error},

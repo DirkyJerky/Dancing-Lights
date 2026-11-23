@@ -1,3 +1,5 @@
+//! Provides control of the Pico W's GPIO signals connected to the CYW43 chip.
+
 use cyw43::Control;
 
 /// Cyw43's addressable GPIO pins, wired for distinct purposes

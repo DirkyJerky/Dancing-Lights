@@ -1,3 +1,7 @@
+//! Displays a numeric value as a progressively illuminated LED-array gauge.
+//! Values are clamped to configured limits, with brightness interpolated
+//! between channel thresholds using 32-bit integer arithmetic.
+
 use embassy_rp::{gpio::Pin, pwm::Slice};
 
 use super::int_pid::{Limits, N};

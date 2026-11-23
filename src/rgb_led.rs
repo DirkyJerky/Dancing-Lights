@@ -1,3 +1,5 @@
+//! Provides color and brightness control for the RGB LED using RGB or HSL values.
+
 use embassy_rp::peripherals::{PIN_13, PIN_14, PIN_15, PWM_SLICE6, PWM_SLICE7};
 
 use crate::utils::pwm_led::PWMLed;
